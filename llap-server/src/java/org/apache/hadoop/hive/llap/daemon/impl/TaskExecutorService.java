@@ -175,7 +175,7 @@ public class TaskExecutorService extends AbstractService
     executionCompletionExecutorService = MoreExecutors.listeningDecorator(
         executionCompletionExecutorServiceRaw);
     ListenableFuture<?> future = waitQueueExecutorService.submit(new WaitQueueWorker());
-    Futures.addCallback(future, new WaitQueueWorkerCallback());
+    Futures.addCallback(future, new WaitQueueWorkerCallback(), MoreExecutors.directExecutor());
   }
 
   private LlapQueueComparatorBase createComparator(
@@ -689,7 +689,7 @@ public class TaskExecutorService extends AbstractService
       taskWrapper);
     // Callback on a separate thread so that when a task completes, the thread in the main queue
     // is actually available for execution and will not potentially result in a RejectedExecution
-    Futures.addCallback(future, wrappedCallback, executionCompletionExecutorService);
+    Futures.addCallback(future, wrappedCallback, MoreExecutors.directExecutor());
 
     boolean canFinish = taskWrapper.getTaskRunnerCallable().canFinish(),
         isGuaranteed = taskWrapper.isGuaranteed();
