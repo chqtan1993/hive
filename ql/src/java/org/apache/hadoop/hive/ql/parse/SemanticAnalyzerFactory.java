@@ -314,6 +314,7 @@ public final class SemanticAnalyzerFactory {
       case HiveParser.TOK_ROLLBACK:
       case HiveParser.TOK_SET_AUTOCOMMIT:
       default: {
+        //默认启用CBO
         SemanticAnalyzer semAnalyzer = HiveConf
             .getBoolVar(queryState.getConf(), HiveConf.ConfVars.HIVE_CBO_ENABLED) ?
                 new CalcitePlanner(queryState) : new SemanticAnalyzer(queryState);

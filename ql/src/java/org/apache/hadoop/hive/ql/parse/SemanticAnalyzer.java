@@ -10086,6 +10086,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   private Operator genTablePlan(String alias, QB qb) throws SemanticException {
 
     String alias_id = getAliasId(alias, qb);
+    //获取table元数据
     Table tab = qb.getMetaData().getSrcForAlias(alias);
     RowResolver rwsch;
 
@@ -10121,6 +10122,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           ColumnInfo colInfo = new ColumnInfo(fields.get(i).getFieldName(),
               TypeInfoUtils.getTypeInfoFromObjectInspector(fields.get(i)
                   .getFieldObjectInspector()), alias, false);
+          //根据table元数据判断是否是数据倾斜的column
           colInfo.setSkewedCol((isSkewedCol(alias, qb, fields.get(i)
               .getFieldName())) ? true : false);
           rwsch.put(alias, fields.get(i).getFieldName(), colInfo);
@@ -10442,6 +10444,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       aliasToOpInfo.put(alias, operator);
       if (qb.getViewToTabSchema().containsKey(alias)) {
         // we set viewProjectToTableSchema so that we can leverage ColumnPruner.
+        // view只可能是Select创建出来的
         if (operator instanceof SelectOperator) {
           if (this.viewProjectToTableSchema == null) {
             this.viewProjectToTableSchema = new LinkedHashMap<>();
@@ -10456,6 +10459,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
 
     // Recurse over all the source tables
+    //所有的TableScanOperator都会放在topOps中
     for (String alias : qb.getTabAliases()) {
       Operator op = genTablePlan(alias, qb);
       aliasToOpInfo.put(alias, op);
@@ -11121,6 +11125,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       throw new SemanticException(ex);
     }
   }
+  //生成计划优化
   Operator genOPTree(ASTNode ast, PlannerContext plannerCtx) throws SemanticException {
     return genPlan(qb);
   }
@@ -11130,6 +11135,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     LOG.info("Starting Semantic Analysis");
     //change the location of position alias process here
     processPositionAlias(ast);
+    //语义分析,will fill QueryBlock,包含meta解析
     if (!genResolvedParseTree(ast, plannerCtx)) {
       return;
     }
@@ -11236,7 +11242,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       TableAccessAnalyzer tableAccessAnalyzer = new TableAccessAnalyzer(pCtx);
       setTableAccessInfo(tableAccessAnalyzer.analyzeTableAccess());
     }
-
+    //优化逻辑计划
     // 7. Perform Logical optimization
     if (LOG.isDebugEnabled()) {
       LOG.debug("Before logical optimization\n" + Operator.toString(pCtx.getTopOps().values()));
@@ -11267,6 +11273,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     // 9. Optimize Physical op tree & Translate to target execution engine (MR,
     // TEZ..)
+    //编译生成tasks,与计算引擎相关
     if (!ctx.getExplainLogical()) {
       TaskCompiler compiler = TaskCompilerFactory.getCompiler(conf, pCtx);
       compiler.init(queryState, console, db);
@@ -12063,6 +12070,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       crtTblDesc.validate(conf);
       // outputs is empty, which means this create table happens in the current
       // database.
+      //Task的名称即为"Stage-x"
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
           crtTblDesc), conf));
       break;

@@ -390,7 +390,7 @@ public class Driver implements CommandProcessor {
     } finally {
       lDrvState.stateLock.unlock();
     }
-
+    //变量替换,替换${var} ${system:var} and ${env:var}等
     command = new VariableSubstitution(new HiveVariableSource() {
       @Override
       public Map<String, String> getHiveVariable() {
@@ -465,6 +465,7 @@ public class Driver implements CommandProcessor {
       ctx.setHDFSCleanup(true);
 
       perfLogger.PerfLogBegin(CLASS_NAME, PerfLogger.PARSE);
+      //语法分析，生成语法树
       ASTNode tree = ParseUtils.parse(command, ctx);
       perfLogger.PerfLogEnd(CLASS_NAME, PerfLogger.PARSE);
 
@@ -481,6 +482,7 @@ public class Driver implements CommandProcessor {
       }
 
       perfLogger.PerfLogBegin(CLASS_NAME, PerfLogger.ANALYZE);
+      //BaseSemanticAnalyzer.analyze提供语义解析能力
       BaseSemanticAnalyzer sem = SemanticAnalyzerFactory.get(queryState, tree);
       List<HiveSemanticAnalyzerHook> saHooks =
           getHooks(HiveConf.ConfVars.SEMANTIC_ANALYZER_HOOK,
@@ -503,6 +505,7 @@ public class Driver implements CommandProcessor {
         for (HiveSemanticAnalyzerHook hook : saHooks) {
           tree = hook.preAnalyze(hookCtx, tree);
         }
+        //语义分析，解析承Operator Tree
         sem.analyze(tree, ctx);
         hookCtx.update(sem);
         for (HiveSemanticAnalyzerHook hook : saHooks) {
@@ -1304,6 +1307,7 @@ public class Driver implements CommandProcessor {
       metrics.incrementCounter(MetricsConstant.WAITING_COMPILE_OPS, 1);
     }
 
+    //编译锁,由hive.driver.parallel.compilation决定是否开启并发编译,默认为false,并发编译时,需要考虑driver机器的内存
     final ReentrantLock compileLock = tryAcquireCompileLock(isParallelEnabled,
       command);
     if (compileLock == null) {
@@ -1314,6 +1318,7 @@ public class Driver implements CommandProcessor {
       if (metrics != null) {
         metrics.decrementCounter(MetricsConstant.WAITING_COMPILE_OPS, 1);
       }
+      //执行编译
       ret = compile(command, true, deferClose);
     } finally {
       compileLock.unlock();
@@ -1403,7 +1408,7 @@ public class Driver implements CommandProcessor {
     }
     return compileLock;
   }
-
+  // Driver执行具体的逻辑
   private CommandProcessorResponse runInternal(String command, boolean alreadyCompiled)
       throws CommandNeedRetryException {
     errorMessage = null;

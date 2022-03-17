@@ -241,6 +241,7 @@ public class QB {
     return aliasToProps.get(alias.toLowerCase());
   }
 
+  //Hive中只支持逻辑视图，view都转换为对应table的子查询进行处理
   public void rewriteViewToSubq(String alias, String viewName, QBExpr qbexpr, Table tab) {
     alias = alias.toLowerCase();
     String tableName = aliasToTabs.remove(alias);
